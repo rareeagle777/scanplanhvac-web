@@ -201,7 +201,110 @@ async function openProject(project) {
     }
 
     show("view-project");
-    await Promise.all([loadReports(), loadWeatherStatus()]);
+    renderRooms(null);
+    const [summary] = await Promise.all([loadSummary(), loadReports(), loadWeatherStatus()]);
+    renderResults(summary);
+    renderRooms(summary);
+}
+
+// MARK: - Load results & rooms
+
+/// The app uploads `_summary.json` (results only) next to the project's reports on every sync.
+async function loadSummary() {
+    if (!currentProject) return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const { data, error } = await supabase.storage.from(REPORTS_BUCKET)
+        .download(`${session.user.id}/${currentProject.id}/_summary.json`);
+    if (error || !data) return null;
+    try {
+        return JSON.parse(await data.text());
+    } catch {
+        return null;
+    }
+}
+
+function renderResults(summary) {
+    const facts = $("results-facts");
+    facts.innerHTML = "";
+    $("results-empty").classList.toggle("hidden", !!summary);
+    if (!summary) return;
+    const rows = [
+        ["Heating load", `${formatNumber(summary.totalHeatingBTUh)} BTU/h`],
+        ["Cooling load", `${formatNumber(summary.totalCoolingBTUh)} BTU/h (${summary.coolingTons} tons)`],
+        ["Sensible / latent", `${formatNumber(summary.sensibleCoolingBTUh)} / ${formatNumber(summary.latentCoolingBTUh)} BTU/h`],
+        ["Winter design temp", `${Math.round(summary.winterDesignTempF)}°F`],
+        ["Summer design temp", `${Math.round(summary.summerDesignTempF)}°F`],
+        ["Calculated", formatDate(summary.generatedAt)],
+    ];
+    for (const [label, value] of rows) {
+        const dt = document.createElement("dt");
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        facts.append(dt, dd);
+    }
+}
+
+/// Room inputs straight from the synced project JSON. The app stores metres / square metres.
+function renderRooms(summary) {
+    const data = currentProject?.data ?? {};
+    const rooms = data.rooms ?? [];
+    const table = $("rooms-table");
+    const body = table.querySelector("tbody");
+    body.innerHTML = "";
+    table.querySelector("tfoot")?.remove();
+    $("rooms-empty").classList.toggle("hidden", rooms.length > 0);
+    table.classList.toggle("hidden", rooms.length === 0);
+
+    const floorNames = new Map((data.floorLevels ?? []).map((f) => [f.id, f.name]));
+    let totalArea = 0;
+    rooms.forEach((room, index) => {
+        const areaSqFt = (room.floorArea ?? 0) * 10.7639;
+        totalArea += areaSqFt;
+        const result = summary?.rooms?.[index];
+        const windows = (room.windows ?? []).reduce((n, w) => n + (w.quantity ?? 1), 0);
+        const cells = [
+            room.name || "Room",
+            room.roomType ?? "",
+            floorNames.get(room.floorLevelId) ?? "",
+            formatNumber(areaSqFt),
+            room.ceilingHeight ? (room.ceilingHeight * 3.28084).toFixed(1) : "",
+            String(windows),
+            String((room.doors ?? []).length),
+            result ? formatNumber(result.heatingBTUh) : "—",
+            result ? formatNumber(result.coolingBTUh) : "—",
+        ];
+        const tr = document.createElement("tr");
+        cells.forEach((text, i) => {
+            const td = document.createElement("td");
+            if (i >= 3) td.className = "num";
+            td.textContent = text;
+            tr.append(td);
+        });
+        body.append(tr);
+    });
+
+    if (rooms.length > 0) {
+        const tfoot = document.createElement("tfoot");
+        const tr = document.createElement("tr");
+        const totals = ["Total", "", "", formatNumber(totalArea), "", "", "",
+            summary ? formatNumber(summary.totalHeatingBTUh) : "—",
+            summary ? formatNumber(summary.totalCoolingBTUh) : "—"];
+        totals.forEach((text, i) => {
+            const td = document.createElement("td");
+            if (i >= 3) td.className = "num";
+            td.textContent = text;
+            tr.append(td);
+        });
+        tfoot.append(tr);
+        table.append(tfoot);
+    }
+}
+
+function formatNumber(value) {
+    if (value == null || Number.isNaN(value)) return "";
+    return Math.round(value).toLocaleString();
 }
 
 /// Plain-language summary only — never the underlying method or constants.
@@ -303,7 +406,7 @@ async function loadWeatherStatus() {
     const count = (files ?? []).filter((f) => f.id && f.name.startsWith(prefix)).length;
     status.textContent = count > 0
         ? `${count} hourly weather range${count === 1 ? "" : "s"} uploaded from the app for this location. Energy analysis on the web will use these.`
-        : "No weather data uploaded yet. Open the project in the app (or edit its address) and it will upload automatically.";
+        : "No weather data uploaded yet. In the app, open any energy analysis for this project (or re-save its address), then sync — the weather uploads automatically.";
 }
 
 // MARK: - Formatting

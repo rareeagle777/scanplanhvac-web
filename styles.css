@@ -115,6 +115,13 @@ button { font: inherit; cursor: pointer; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
 
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.data-table th, .data-table td { padding: 8px 10px; border-top: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.data-table thead th { border-top: none; color: var(--muted); font-weight: 500; }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tfoot td { font-weight: 600; }
+
 .report-list li {
     display: flex;
     justify-content: space-between;

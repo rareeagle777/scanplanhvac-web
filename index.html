@@ -73,12 +73,41 @@
             </div>
 
             <div class="card">
+                <h2>Load results</h2>
+                <p id="results-empty" class="muted small hidden">Load results appear here after the project syncs from the app.</p>
+                <dl id="results-facts" class="facts"></dl>
+            </div>
+
+            <div class="card">
+                <h2>Rooms</h2>
+                <p id="rooms-empty" class="muted small hidden">This project has no rooms yet.</p>
+                <div class="table-wrap">
+                    <table id="rooms-table" class="data-table hidden">
+                        <thead>
+                            <tr>
+                                <th>Room</th>
+                                <th>Type</th>
+                                <th>Floor</th>
+                                <th class="num">Area (sq ft)</th>
+                                <th class="num">Ceiling (ft)</th>
+                                <th class="num">Windows</th>
+                                <th class="num">Doors</th>
+                                <th class="num">Heating (BTU/h)</th>
+                                <th class="num">Cooling (BTU/h)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
                 <div class="section-head">
                     <h2>Reports</h2>
                     <button id="refresh-reports" class="link-button">Refresh</button>
                 </div>
-                <p class="muted small">Every PDF exported from the app for this project. Re-exporting a report replaces the copy here.</p>
-                <p id="reports-empty" class="muted hidden">No reports yet. Open the project in the app and export a report; it uploads automatically.</p>
+                <p class="muted small">The core reports update automatically whenever the project changes in the app. Reports from individual analysis screens appear once they've been opened there.</p>
+                <p id="reports-empty" class="muted hidden">No reports yet. They upload the next time the app syncs this project.</p>
                 <ul id="report-list" class="report-list"></ul>
             </div>
 
